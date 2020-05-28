@@ -174,11 +174,11 @@
     }
 
     function titleControlBGM() {
-      if (bgm.volume === 1) {
+      if (bgm.volume > 0) {
         bgm.volume = 0;
       }
       else {
-        bgm.volume = 1;
+        bgm.volume = 0.5;
       }
       
     }
@@ -594,6 +594,7 @@
       setTimeout(bgmStart,1);
       function bgmStart() {
         bgm.currentTime = 0;
+        bgm.volume = 0.5;
         bgm.play();
       }
 

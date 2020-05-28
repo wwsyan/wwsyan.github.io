@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  
+  <style>
+    body {
+      background-image: url(images/fruits.jpg);
+    }
+  
+    #title {
+      text-align: center;
+      color: rgb(248, 38, 84);
+      padding: 15px;
+      font-weight: bolder;
+      font-size: 40px;
+      -webkit-text-stroke: 1px black;
+      text-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+    }
+
+    #title:hover {
+      transform: scale(1.1);
+      cursor: pointer;
+    }
+
+    #grid {
+      margin: auto;
+    }
+
+    .blocks {
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        display: block;   /* 让span以block方式显示 */
+        text-align: center;
+        user-select: none;  /* 设置不可拖拽选中 */
+        cursor: pointer;  /* 设置鼠标停留样式 */
+        box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+     }
+
+    .blocks:hover {
+            background: rgb(255, 188, 235);  /* 鼠标停留时背景颜色变化 */
+            transform: scale(1.2);
+        }
+
+    .blocks_1 {
+        border: transparent;
+        background-color: rgb(117, 182, 117);
+        border-radius: 15%;
+        font-weight: bold;
+      }
+
+    .banClick {
+      pointer-events: none;
+    }
+
+    #gameStart {
+      width: 14%;
+      float: left;
+      text-align: center;
+      padding-top: 10px;
+    }
+
+    #playerScoleBox {
+      width: 10%;
+      float: left;
+    }
+
+    #computerScoleBox {
+      width: 10%;
+      float: left;
+    }
+
+    #button {
+      font-size: 25px;
+      font-weight: bold;
+      border-radius: 20%;
+      padding: 8px;
+    }
+
+    #button:hover {
+      transform: scale(1.2);
+      animation-name: shake;
+      animation-duration: 0.5s;
+      animation-iteration-count: infinite;
+    }
+
+    @keyframes shake {
+      0% {
+        transform: rotate(0deg);
+      }
+      25% {
+        transform: rotate(-5deg);
+      }
+      50% {
+        transform: rotate(0deg);
+      }
+      75% {
+        transform: rotate(5deg);
+      }
+      100% {
+        transform: rotate(0deg);
+      }
+    }
+
+    @keyframes rotate {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes scale {
+      0% {
+        transform: scale(1.0);
+      }
+      100% {
+        transform: scale(1.2);
+      }
+    }
+
+    p {
+      font-size: 20px;
+      font-weight: 900;
+      color: black;
+      -webkit-text-stroke: 1px white;
+      text-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+      text-align: center;
+    }
+
+    h2 {
+      width: 33%;
+      float: left;
+      color: transparent;
+      text-align: center;
+    }
+
+  </style>
+  <!-- 目前大部分主流浏览器不支持autoplay -->
+   <audio id="bgm" src="sound\throwback-galaxy.mp3" loop preload="auto"></audio>
+  </head>
+
+<!-- ondragstart:防拖拽生成新页面 oncontextmenu:屏蔽右键菜单-->
+
+<body ondragstart='return false' oncontextmenu='self.event.returnValue=false'>
+  
+  <h1 id = 'title' onmousedown="titleControlBGM()">找果果🍓</h1>
+  <table id='grid'></table>
+  <div>
+  <h2>填充物</h2>
+  <div id = 'playerScoleBox'><p id = 'playerScole'>玩家得分：0</p></div>
+  <div id = 'gameStart'><button id = "button">开始游戏</button></div>
+  <div id = 'computerScoleBox'><p id = 'computerScole'>电脑得分：0</p></div>
+  <h2>填充物</h2>
+  </div>
+  
+
+  <script>
+    const testButton = document.getElementById('button');
+    const playerScolePara = document.getElementById('playerScole');
+    const computerScolePara = document.getElementById('computerScole');
+    const bgm = document.getElementById('bgm');
+    var row = 12; //行数
+    var col = 12; //列数
+    var maxCount = 20; //最大地雷数量
+    var playerScole = 0;
+    var computerScole = 0;
+    var grid = init_grid(); //初始化
+    for (i = 0; i < row; i++) {
+      for (j = 0; j < col; j++) {
+        grid[i][j].isOpen = true;
+      }
+    }
+
+    function titleControlBGM() {
+      if (bgm.volume === 1) {
+        bgm.volume = 0;
+      }
+      else {
+        bgm.volume = 1;
+      }
+      
+    }
+
+    //初始化矩阵 (row-行数 col-列数)
+    function init_grid() {
+
+      //生成矩阵html <tr>--行标签 <td>--列标签
+      let gridHtml = '';
+      for (let i = 0; i < row; i++) {
+        gridHtml += '<tr>'
+        for (let j = 0; j < col; j++) {
+          gridHtml +=
+            '<td><span class="blocks blocks_1" onmousedown="block_click(' + i + ',' + j + ')"></span></td>';
+        }
+        gridHtml += '<tr>'
+      }
+      //写入html
+      document.getElementById('grid').innerHTML = gridHtml;
+
+      //返回矩阵二维数组
+      let blocks = document.getElementsByClassName('blocks_1');
+      let grid = new Array();
+      for (let i = 0; i < blocks.length; i++) {
+        if (i % col === 0) {
+          grid.push(new Array());
+        }
+        //初始化计雷数
+        blocks[i].tip = 0;
+        grid[parseInt(i / col)].push(blocks[i]);
+        grid[Math.floor(i / col)][i % col].worthOpen = true; 
+      }
+      return grid;
+    }
+
+
+    //初始化概率阵
+    function init_proMat() {
+      let proMat = new Array();
+      for (i = 0; i < row; i++) {
+        proMat.push(new Array());
+        for (j = 0; j < col; j++) {
+            proMat[i].push(0);
+        }
+      }
+      return proMat;
+    }
+
+
+    //方格点击事件 _i：坐标i _j:坐标j
+    function block_click(_i, _j) {
+
+      //跳过已打开的方格
+      if (grid[_i][_j].isOpen) {
+        return;
+      }
+
+      //鼠标左键打开方格
+      if (event.button === 0) {
+        //执行打开方格函数
+        block_open(_i, _j);
+        if (playerScole === Math.floor(maxCount/2) + 1) {
+          alert('你胜利了！');
+          showRestMine();
+          return;
+        }
+        if (playerScole === computerScole && playerScole === maxCount/2) {
+          alert('战平！');
+          showRestMine();
+          return;
+        }
+        
+        // 电脑打开方块
+        computer_click();
+        if (computerScole === Math.floor(maxCount/2) + 1) {
+          alert('害，电脑胜利了');
+          showRestMine();
+          return;
+        }
+        if (computerScole === playerScole && computerScole === maxCount/2) {
+          alert('战平！');
+          showRestMine();
+          return;
+        }
+      }
+    }
+
+    function showRestMine() {
+      for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+          grid[i][j].isOpen = true;
+          if (grid[i][j].isMine) {
+            grid[i][j].innerHTML = '🍓';
+          }
+        }
+      }
+    }
+
+
+    // 电脑打开方格总体事件（计算概率 => 点击方块）
+    function computer_click() {
+      var proMat = init_proMat();
+      // 排除不可能是雷的方格，即对block的自定义属性worthOpen赋值：block.worthOpen = fasle
+      for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+          if (grid[i][j].isOpen && !grid[i][j].isMine) {
+            countOpenMine = 0;
+
+            for (_i = i-1; _i <= i+1; _i++ ) {
+              for (_j = j-1; _j <= j+1; _j++) {
+                if (_i >=0 && _j >=0 && _i < row && _j < col) {
+                  block = grid[_i][_j];
+                  if (block.isMine && block.isOpen) {countOpenMine++;}
+                }
+              }
+            }
+
+            if (grid[i][j].tip === countOpenMine) {
+              for (_i = i-1; _i <= i+1; _i++) {
+                for (_j = j-1; _j <= j+1; _j++) {
+                  if (_i >=0 && _j >=0 && _i < row && _j < col && !grid[_i][_j].isOpen) {
+                    grid[_i][_j].worthOpen = false; 
+                  }
+                }
+              }
+            }
+
+          }
+        }
+      }
+          
+      // 计算概率矩阵：proMat[i][j] = block.tip - countOpenMine / countWorthOpenMine
+      for(i = 0; i < row; i++) {
+        for(j = 0; j < col; j++) {
+
+          if (grid[i][j].isOpen && !grid[i][j].isMine) {
+            countOpenMine = 0;
+            countWorthOpenMine = 0;
+
+            for (_i = i-1; _i <= i+1; _i++) {
+              for (_j = j-1; _j <= j+1; _j++) {
+                if (_i >=0 && _j >=0 && _i < row && _j < col) {
+                  block = grid[_i][_j];
+                  if (block.isMine && block.isOpen) {countOpenMine++;}
+                  if (block.worthOpen) {countWorthOpenMine++;} 
+                }
+              }
+            }
+            if (countWorthOpenMine > 0) {proMat[i][j] = ( grid[i][j].tip - countOpenMine ) / countWorthOpenMine;}
+          }
+        }
+      }
+      console.log(proMat);
+
+      // 找出 max(proMat[i][j]) 对应的i和j
+      [maxi,maxj] = findMaxij(proMat);
+      console.log('maxij: ' + maxi + ' ' + maxj);
+
+      function findMaxij(Mat) {
+        max_i = -1;
+        max_j = -1;
+        array = new Array();
+        for (i = 0; i < row; i++) {
+          for (j = 0; j < col; j++) {
+            array.push(proMat[i][j]);
+          }
+        }
+        max = Math.max(...array)
+        console.log('maxPro: ' + max);
+        if (max > 0) {
+          maxIndice = array.findIndex( (element) => element == max );
+          max_i = Math.floor(maxIndice / col);
+          max_j = maxIndice % col;
+        }
+        return [max_i,max_j];
+      }
+
+      // 如果不存在 maxij，则随机点一个worthOpen的方块，返回di dj
+      if (maxi === -1 && maxj === -1) {
+        count = 0;
+        while (count < 1) {
+          ri = Math.floor(Math.random() * row);
+          rj = Math.floor(Math.random() * col);
+          console.log('rij: ' + ri + ' ' + rj);
+          if (!grid[ri][rj].isOpen && grid[ri][rj].worthOpen) {
+            di = ri; dj = rj;
+            count++;
+          }
+        }
+      }
+      // 如果存在 maxij，则在maxij的范围内随机点一个worthOpen的方块，返回di dj
+      else  {
+        arrayOpen = new Array();
+        for (i = maxi-1; i <= maxi+1; i++) {
+          for (j = maxj-1; j <= maxj+1; j++) {
+            if (i >= 0 && j >= 0 && i < row && j < col && grid[i][j].worthOpen && !grid[i][j].isOpen) {
+              arrayOpen.push([i,j]);
+            }
+          }
+        }
+        rand = Math.floor(Math.random() * arrayOpen.length);
+        [di,dj] = arrayOpen[rand];
+      }
+      
+      // 电脑打开方块
+      console.log('didj: ' + di + ' ' + dj);
+      if (!grid[di][dj].isOpen) {
+        block_comp_open(di,dj);
+      }
+    }
+
+
+    //玩家打开方格函数
+    function block_open(_i, _j) {
+
+      let block = grid[_i][_j];
+      op(block);
+
+      //设定打开方格的状态与样式
+      function op(block) {
+        block.isOpen = true; //isOpen为自定义属性，设置为true代表已打开
+        block.worthOpen = false;
+        if (block.isMine) {
+          block.style.background = 'rgb(255, 188, 235)';
+        }
+        else {
+          block.style.background = 'rgb(248, 246, 218)';
+        } 
+        block.style.cursor = 'default'; //将鼠标停留样式设置为默认
+      }
+
+      if (block.isMine) {
+        block.innerHTML = '🍓';
+        playerScole++;
+        playerScolePara.innerHTML = '玩家得分：' + playerScole;
+      } 
+      else if (block.tip === 0) {
+        //打开计雷数为0的方格
+        //遍历九宫格内的方格
+        for (let i = _i - 1; i < _i + 2; i++) {
+          for (let j = _j - 1; j < _j + 2; j++) {
+            //判断是否越界&&跳过已打开的方格&&非雷
+            if (i > -1 && j > -1 && i < row && j < col && !grid[i][j].isOpen && !grid[i][j].ismine) {
+              //递归打开方格函数
+              block_open(i, j);
+            }
+          }
+        }
+      } 
+      else {
+        //打开计雷数不为0的方格
+        block.innerHTML = block.tip; //显示计雷数
+        switch (block.tip) {
+          case 1:
+            block.style.color = '#4876FF'; break;
+          case 2: 
+            block.style.color = '#008B45'; break;
+          case 3:
+            block.style.color = '#CD5555'; break;
+          case 4:
+            block.style.color = '#0000CD'; break;
+          case 5:
+            block.style.color = '#FFB90F'; break;
+          case 6:
+            block.style.color = '#FF7F00'; break;
+          case 7:
+            block.style.color = '#00EEEE'; break;
+          case 8:
+            block.style.color = '#FF0000'; break;
+        }
+      }
+    }
+
+
+    //电脑打开方格函数
+    function block_comp_open(_i, _j) {
+
+      let block = grid[_i][_j];
+      op(block);
+
+      //设定打开方格的状态与样式
+      function op(block) {
+        block.isOpen = true; //isOpen为自定义属性，设置为true代表已打开
+        block.worthOpen = false;
+        block.style.animation =  'rotate 0.5s';
+        if (block.isMine) {
+          block.style.background = 'rgb(255, 188, 235)';
+        }
+        else {
+          block.style.background = 'rgb(248, 246, 218)';
+        } 
+        block.style.cursor = 'default'; //将鼠标停留样式设置为默认
+      }
+
+      if (block.isMine) {
+        block.innerHTML = '🍓';
+        computerScole++;
+        computerScolePara.innerHTML = '电脑得分：' + computerScole;
+      } 
+      else if (block.tip === 0) {
+        //打开计雷数为0的方格
+        //遍历九宫格内的方格
+        for (let i = _i - 1; i < _i + 2; i++) {
+          for (let j = _j - 1; j < _j + 2; j++) {
+            //判断是否越界&&跳过已打开的方格&&非雷
+            if (i > -1 && j > -1 && i < row && j < col && !grid[i][j].isOpen && !grid[i][j].ismine) {
+              //递归打开方格函数
+              block_open(i, j);
+            }
+          }
+        }
+      } 
+      else {
+        //打开计雷数不为0的方格
+        block.innerHTML = block.tip; //显示计雷数
+        switch (block.tip) {
+          case 1:
+            block.style.color = '#4876FF'; break;
+          case 2: 
+            block.style.color = '#008B45'; break;
+          case 3:
+            block.style.color = '#CD5555'; break;
+          case 4:
+            block.style.color = '#0000CD'; break;
+          case 5:
+            block.style.color = '#FFB90F'; break;
+          case 6:
+            block.style.color = '#FF7F00'; break;
+          case 7:
+            block.style.color = '#00EEEE'; break;
+          case 8:
+            block.style.color = '#FF0000'; break;
+        }
+      }
+    }
+
+
+    // 开始游戏按钮
+    function clickButton() {
+      grid = init_grid();
+      proMat = init_proMat();
+      playerScole = 0;
+      computerScole = 0;
+      playerScolePara.innerHTML = '玩家得分：0';
+      computerScolePara.innerHTML = '电脑得分：0';
+      startGameAnimation();
+      //生成地雷
+      let count = 0;
+      while (count < maxCount) {
+
+        //生成随机坐标
+        let ri = Math.floor(Math.random() * row);
+        let rj = Math.floor(Math.random() * col);
+
+        if (!grid[ri][rj].isMine) {
+          grid[ri][rj].isMine = true; //自定义属性isMine代表方格为地雷
+          count++; //当前地雷数+1
+        }
+      }
+      genTips();
+    }
+    button.addEventListener('click',clickButton);
+    
+
+    // 生成提示
+    function genTips() {
+      for (let i = 0; i < row; i++) {
+          for (let j = 0; j < col; j++) {
+            // 搜索中心点周围3×3区域内雷的数量
+            count = 0;
+            for (let si = i-1; si <= i+1; si++ ) {
+              for (let sj = j-1; sj <= j+1; sj++) {
+                if (si >= 0 && si < row && sj >= 0 && sj < col && grid[si][sj].isMine) {
+                    count++
+                }
+              }
+            }
+            grid[i][j].tip = count;
+          }
+      }
+    }
+
+    // 点击开始游戏按钮动画
+    function startGameAnimation() {
+      // 开字数组
+      Kai = [[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[3,4],[3,7],[4,4],[4,7],[5,1],[5,2],[5,3],[5,4],[5,5],[5,6],[5,7],[5,8],[5,9],[5,10],
+      [6,4],[6,7],[7,4],[7,7],[8,3],[8,7],[9,2],[9,7],[10,7]];
+      Shi = [[2,3],[2,9],[3,3],[3,8],[4,2],[4,7],[4,10],[5,0],[5,1],[5,2],[5,3],[5,4],[5,6],[5,7],[5,8],[5,9],[5,10],[5,11],[6,2],[6,4],[7,1],
+      [7,3],[7,7],[7,8],[7,9],[7,10],[8,2],[8,7],[8,10],[9,1],[9,3],[9,7],[9,10],[10,4],[10,7],[10,8],[10,9],[10,10]];
+
+      // 禁止在动画期间有鼠标输入
+      for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+          grid[i][j].classList.add('banClick');
+        }
+      }
+      
+      bgmStart();
+      function bgmStart() {
+        bgm.currentTime = 0;
+        bgm.play();
+      }
+
+
+      setTimeout(show_Kai,0);
+      function show_Kai() {
+          for (i = 0; i < row; i++) {
+              for (j = 0; j < col; j++) {
+                  grid[i][j].style.background = '#00BFFF';
+              }
+          }
+          for (i = 0; i < Kai.length; i++) {
+              [m,n] = Kai[i];
+              grid[m][n].style.background = 'rgb(255, 188, 235)';
+          }
+      }
+      
+
+      setTimeout(show_Shi,350);
+      function show_Shi() {
+          for (i = 0; i < row; i++) {
+              for (j = 0; j < col; j++) {
+                  grid[i][j].style.background = '#00BFFF';
+              }
+          }
+          for (i = 0; i < Shi.length; i++) {
+              [m,n] = Shi[i];
+              grid[m][n].style.background = 'rgb(255, 188, 235)';
+          }
+      }
+      
+      setTimeout(recover,700);
+      function recover() {
+        // 恢复背景颜色
+        for (i = 0; i < row; i++) {
+            for (j = 0; j < col; j++) {
+                grid[i][j].style.background = 'rgb(117, 182, 117)';
+            }
+        }
+        // 恢复鼠标输入
+        for (i = 0; i < row; i++) {
+        for (j = 0; j < col; j++) {
+          grid[i][j].classList.remove('banClick');
+          }
+        }
+      }
+    }
+
+  </script>
+</body>
+
+</html>

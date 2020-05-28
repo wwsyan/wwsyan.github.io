@@ -569,6 +569,21 @@
       Shi = [[2,3],[2,9],[3,3],[3,8],[4,2],[4,7],[4,10],[5,0],[5,1],[5,2],[5,3],[5,4],[5,6],[5,7],[5,8],[5,9],[5,10],[5,11],[6,2],[6,4],[7,1],
       [7,3],[7,7],[7,8],[7,9],[7,10],[8,2],[8,7],[8,10],[9,1],[9,3],[9,7],[9,10],[10,4],[10,7],[10,8],[10,9],[10,10]];
 
+      // 将“开”和“始”写成一个大数组
+      for (i = 0; i < Kai.length; i++) {
+          Kai[i][1] += 12;
+        }
+        for (i = 0; i < Shi.length; i++) {
+          Shi[i][1] += 24;
+        }
+        KaiShi = new Array();
+        for (i = 0; i < Kai.length; i++) {
+          KaiShi.push(Kai[i]);
+        }
+        for (i = 0; i < Shi.length; i++) {
+          KaiShi.push(Shi[i]);
+      }
+
       // 禁止在动画期间有鼠标输入
       for (i = 0; i < row; i++) {
         for (j = 0; j < col; j++) {
@@ -576,41 +591,44 @@
         }
       }
       
-      bgmStart();
+      setTimeout(bgmStart,1);
       function bgmStart() {
         bgm.currentTime = 0;
         bgm.play();
       }
 
+      function display() {
+          // 关注话题：深拷贝/浅拷贝
+          var KaiShi_temp = JSON.parse(JSON.stringify(KaiShi))
 
-      setTimeout(show_Kai,0);
-      function show_Kai() {
-          for (i = 0; i < row; i++) {
-              for (j = 0; j < col; j++) {
-                  grid[i][j].style.background = '#00BFFF';
-              }
+          if (count > 2*row-1) {
+            clearInterval(intervalID);
           }
-          for (i = 0; i < Kai.length; i++) {
-              [m,n] = Kai[i];
-              grid[m][n].style.background = 'rgb(255, 188, 235)';
-          }
-      }
-      
 
-      setTimeout(show_Shi,350);
-      function show_Shi() {
-          for (i = 0; i < row; i++) {
-              for (j = 0; j < col; j++) {
-                  grid[i][j].style.background = '#00BFFF';
-              }
+          for (p = 0; p < KaiShi_temp.length; p++) {
+            KaiShi_temp[p][1] -= count;
           }
-          for (i = 0; i < Shi.length; i++) {
-              [m,n] = Shi[i];
+          
+          for (p = 0; p < row; p++) {
+            for (q = 0; q < col; q++) {
+              grid[p][q].style.background = '#00BFFF';
+            }
+          }
+
+          for (p = 0; p < KaiShi_temp.length; p++) {
+            [m,n] = KaiShi_temp[p];
+            if (n >=0 && n < col) {
               grid[m][n].style.background = 'rgb(255, 188, 235)';
+            }
           }
+          count++;
+          console.log(count);
       }
+      count = 0;
+      intervalID = setInterval(display,50);
       
-      setTimeout(recover,700);
+    
+      setTimeout(recover,2000);
       function recover() {
         // 恢复背景颜色
         for (i = 0; i < row; i++) {
